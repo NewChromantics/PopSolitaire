@@ -1,0 +1,257 @@
+<html>
+<head>
+<title>Solitaire</title>
+<style type=text/css>
+
+.Card, .HandName
+{
+	display:	block;
+	margin:		0px;
+	padding:	5px;
+	width:		100px;
+	height:		120px;
+	border:		solid #000 1px;
+	text-align:	center;
+	overflow:	hidden;
+	background-color: #fff;
+}
+
+.HandName
+{
+	border:		none;
+}
+
+.Card
+{
+	cursor:	hand;
+}
+
+.Card img
+{
+	margin:	10px;
+}
+
+.Hand:after
+{
+	content:	'';
+	display:	block;
+	clear:		both;
+}
+
+#Deck
+{
+	min-height:	50px;
+	background-color: #2C2;
+}
+
+</style>
+</head>
+<body>
+
+
+<div id=Deck>
+	Deck
+</div>
+
+<script>
+
+	function CreateSuit(Name,Colour)
+	{
+		return { 'Name':Name, 'Colour':Colour };
+	}
+
+	var HighestZ = 1;
+	var $Red = 'red';
+	var $Black = 'black';
+	var $Jack = 'Jack';
+	var $Queen = 'Queen';
+	var $King = 'King';
+	var $Ace = 'Ace';
+	var $Diamond = CreateSuit('Diamond',$Red);
+	var $Heart = CreateSuit('Heart',$Red);
+	var $Spade = CreateSuit('Spade',$Black);
+	var $Club = CreateSuit('Club',$Black);
+
+	function float2(x,y)
+	{
+		return {'x':x, 'y':y };
+	}
+
+	function SetElementPosition(Element,x,y)
+	{
+		Element.style.position = 'absolute';
+		Element.style.top = ( y) + "px";
+		Element.style.left = ( x) + "px";
+	}
+
+	function SetElementToTop(Element)
+	{
+		HighestZ++;
+		Element.style.zIndex = HighestZ;
+	}
+
+	function MakeElementAbsolute(Element)
+	{
+		if ( Element.style.position == "absolute" )
+		{
+			//console.log("Already absolute");
+			return;
+		}
+		
+		//	get current pos
+		let Rect = Element.getBoundingClientRect();
+		Element.style.position = "absolute";
+		Element.style.left = Rect.left + "px";
+		Element.style.top = Rect.top + "px";
+		document.body.appendChild(Element);
+	}
+
+	function SetElementPosition(Element,x,y)
+	{
+		MakeElementAbsolute(Element);
+		
+		//	don't allow element off-window
+		let Rect = Element.getBoundingClientRect();
+		let ElementWidth = Rect.width;
+		let ElementHeight = Rect.height;
+		let ScreenSize = float2( Element.parentNode.clientWidth, Element.parentNode.clientHeight );
+		let ScreenMin = float2(0,0);
+		let ScreenMax = float2(ScreenSize.x - ElementWidth, ScreenSize.y - ElementWidth );
+		x = Math.max( ScreenMin.x, x );
+		y = Math.max( ScreenMin.y, y );
+		x = Math.min( ScreenMax.x, x );
+		y = Math.min( ScreenMax.y, y );
+		
+		Element.style.left = x + "px";
+		Element.style.top = y + "px";
+	}
+
+	function SetElementParent(Element,Parent)
+	{
+		//	make absolute (to detatch from current parent)
+		MakeElementAbsolute(Element);
+		
+		//	make element relative again
+		let ParentRect = Parent.getBoundingClientRect();
+		let ChildRect = Element.getBoundingClientRect();
+		ChildRect.x -= ParentRect.x;
+		ChildRect.y -= ParentRect.y;
+		Parent.appendChild(Element);
+		Element.style.left = ChildRect.x + "px";
+		Element.style.top = ChildRect.y + "px";
+		Element.style.position = "relative";
+		console.log(Element);
+	}
+
+	function MakeElementDraggable(Element)
+	{
+		let OnMouseDrag = function(e)
+		{
+			e = e || window.event;
+			e.preventDefault();
+			
+			let MouseX = e.clientX;
+			let MouseY = e.clientY;
+			
+			let NewX = MouseX - Element.grabLocalX;
+			let NewY = MouseY - Element.grabLocalY;
+			
+			//	todo: check for hover, snap
+			
+			SetElementPosition( Element, NewX, NewY );
+		};
+
+		let OnMouseUp = function(e)
+		{
+			e = e || window.event;
+			e.preventDefault();
+
+			let MouseX = e.clientX;
+			let MouseY = e.clientY;
+			
+			let NewX = MouseX - Element.grabLocalX;
+			let NewY = MouseY - Element.grabLocalY;
+			
+			//	todo: check for drop, snap/go back to where we started
+			
+			SetElementPosition( Element, NewX, NewY );
+
+			Element.onmouseup = null;
+			Element.onmousemove = null;
+			document.onmouseup = null;
+		};
+
+		let OnMouseDown = function(e)
+		{
+			e = e || window.event;
+			e.preventDefault();
+			
+			//	jump to top
+			SetElementToTop(Element);
+			
+			Element.grabClientX = e.clientX;
+			Element.grabClientY = e.clientY;
+			let ClientRect = Element.getBoundingClientRect();
+			Element.grabLocalX = Element.grabClientX - ClientRect.x;
+			Element.grabLocalY = Element.grabClientY - ClientRect.y;
+			Element.startDragX = ClientRect.x;
+			Element.startDragY = ClientRect.y;
+			
+			//	convert element to absolute
+			SetElementPosition( Element, Element.startDragX, Element.startDragY );
+
+			Element.onmouseup = OnMouseUp;
+			Element.onmousemove = OnMouseDrag;
+			//	capture document mouse up in case the user drags off-window
+			document.onmouseup = OnMouseUp;
+		};
+		
+		Element.onmousedown = OnMouseDown;
+	}
+
+	function CreateCard(Number,Suit)
+	{
+		var Card = document.createElement('div');
+		Card.className = 'Card';
+		
+		var ImageElement = document.createElement('img');
+		var ImageUrl = 'Card_' + Suit.Name + Number + '.png';
+		ImageElement.src = ImageUrl;
+		Card.appendChild( document.createTextNode( Number + ' ' + Suit.Name ) );
+		Card.appendChild( ImageElement );
+		
+		MakeElementDraggable( Card );
+		
+		return { 'Number':Number, 'Suit':Suit, 'Element':Card };
+	}
+
+
+	function Init()
+	{
+		let Cards = [];
+		Cards.push( CreateCard(7,$Club) );
+		Cards.push( CreateCard(8,$Club) );
+		Cards.push( CreateCard($Jack,$Club) );
+		Cards.push( CreateCard(9,$Diamond) );
+		Cards.push( CreateCard($Jack,$Diamond) );
+		Cards.push( CreateCard($Queen,$Heart) );
+		Cards.push( CreateCard($Jack,$Spade) );
+		
+		let DeckElement = document.getElementById('Deck');
+		var x = 0;
+		let PositionCard = function(Card)
+		{
+			x += 20;
+			SetElementPosition( Card.Element, x, 20 );
+			//SetElementParent( Card.Element, DeckElement );
+		};
+		Cards.forEach( PositionCard );
+	}
+
+	Init();
+
+</script>
+
+</body>
+</html>
+
