@@ -8,11 +8,12 @@
 	display:	block;
 	margin:		0px;
 	padding:	5px;
-	width:		100px;
-	height:		120px;
+	width:		18vmin;
+	height:		calc( 18vmin * 96 / 71 );
 	border:		solid #000 1px;
 	text-align:	center;
 	overflow:	hidden;
+	background-size:	cover;
 	background-color: #fff;
 }
 
@@ -24,11 +25,6 @@
 .Card
 {
 	cursor:	hand;
-}
-
-.Card img
-{
-	margin:	10px;
 }
 
 .Hand:after
@@ -43,28 +39,64 @@ body
 	padding:	0px;
 }
 
+.DeckHolder, #DeckTopRow
+{
+	margin:		1vmin;
+	display:	flow-root;
+}
+
 .Deck
 {
-	padding:	0px;
+	margin:		1vmin;
+	
 	float:		left;
-	xxxmargin:		20px 400px 20px 20px;
-	width:		200px;
-	height:		200px;
+	width:		20vmin;
+	height:		calc( 20vmin * 96 / 71 );
 	background-color: #2C2;
+}
+
+#SuitDeckHolder
+{
+	float:	right;
+}
+
+#NewCardDeckHolder
+{
+	float:	left;
 }
 
 </style>
 </head>
 <body>
 
+<div id=DeckTopRow>
+	<div id=NewCardDeckHolder class=DeckHolder>
+		<div class=Deck id=NewCardDeck></div>
+	</div>
 
-<div class=Deck></div>
+	<div id=SuitDeckHolder class=DeckHolder>
+		<div class=Deck id=HeartDeck></div>
+		<div class=Deck id=SpadeDeck></div>
+		<div class=Deck id=DiamondDeck></div>
+		<div class=Deck id=ClubDeck></div>
+	</div>
+</div>
+
+<div id=ScratchDeckHolder class=DeckHolder>
+	<div class=Deck id=ScratchDeck0></div>
+	<div class=Deck id=ScratchDeck1></div>
+	<div class=Deck id=ScratchDeck2></div>
+	<div class=Deck id=ScratchDeck3></div>
+	<div class=Deck id=ScratchDeck4></div>
+	<div class=Deck id=ScratchDeck5></div>
+	<div class=Deck id=ScratchDeck6></div>
+</div>
 
 <script>
 
-	function CreateSuit(Name,Colour)
+	function CreateSuit(_Name,_Colour)
 	{
-		return { 'Name':Name, 'Colour':Colour };
+		return { Name:_Name, Colour:_Colour };
 	}
 
 	var HighestZ = 1;
@@ -79,9 +111,9 @@ body
 	var $Spade = CreateSuit('Spade',$Black);
 	var $Club = CreateSuit('Club',$Black);
 
-	function float2(x,y)
+	function float2(_x,_y)
 	{
-		return {'x':x, 'y':y };
+		return {x:_x, y:_y };
 	}
 
 	function SetElementPosition(Element,x,y)
@@ -97,6 +129,47 @@ body
 		Element.style.zIndex = HighestZ;
 	}
 
+	function GetElementRect(Element)
+	{
+		let absolutePosition = GetElementRect;
+		let el = Element;
+		//	need to cope with scroll, not just getBoundingClientRect :/
+		//	https://stackoverflow.com/a/32623832/355753
+		let
+		found,
+		left = 0,
+		top = 0,
+		width = 0,
+		height = 0,
+		offsetBase = absolutePosition.offsetBase;
+		if (!offsetBase && document.body) {
+			offsetBase = absolutePosition.offsetBase = document.createElement('div');
+			offsetBase.style.cssText = 'position:absolute;left:0;top:0';
+			document.body.appendChild(offsetBase);
+		}
+		if (el && el.ownerDocument === document && 'getBoundingClientRect' in el && offsetBase) {
+			let boundingRect = el.getBoundingClientRect();
+			let baseRect = offsetBase.getBoundingClientRect();
+			found = true;
+			left = boundingRect.left - baseRect.left;
+			top = boundingRect.top - baseRect.top;
+			width = boundingRect.right - boundingRect.left;
+			height = boundingRect.bottom - boundingRect.top;
+		}
+		return {
+			found: found,
+			left: left,
+			top: top,
+			width: width,
+			height: height,
+			right: left + width,
+			bottom: top + height,
+			x: left,
+			y: top,
+			xy: float2(left,top)
+		};
+	}
+
 	function MakeElementAbsolute(Element)
 	{
 		if ( Element.style.position == "absolute" )
@@ -106,7 +179,7 @@ body
 		}
 		
 		//	get current pos
-		let Rect = Element.getBoundingClientRect();
+		let Rect = GetElementRect(Element);
 		Element.style.position = "absolute";
 		Element.style.left = Rect.left + "px";
 		Element.style.top = Rect.top + "px";
@@ -118,7 +191,7 @@ body
 		MakeElementAbsolute(Element);
 		
 		//	don't allow element off-window
-		let Rect = Element.getBoundingClientRect();
+		let Rect = GetElementRect(Element);
 		let ElementWidth = Rect.width;
 		let ElementHeight = Rect.height;
 		let ScreenSize = float2( Element.parentNode.clientWidth, Element.parentNode.clientHeight );
@@ -143,8 +216,8 @@ body
 			return;
 		
 		//	make element relative again
-		let ParentRect = Parent.getBoundingClientRect();
-		let ChildRect = Element.getBoundingClientRect();
+		let ParentRect = GetElementRect(Parent);
+		let ChildRect = GetElementRect(Element);
 		ChildRect.x -= ParentRect.x;
 		ChildRect.y -= ParentRect.y;
 		Parent.appendChild(Element);
@@ -161,7 +234,7 @@ body
 		//	there is no function for getting all elements under a rect,
 		//	so instead we'll check the corners
 		//	for now that'll probably be enough, if we get some thin places to drop, may we'll have to check a grid of the rect
-		let ElementRect = Element.getBoundingClientRect();
+		let ElementRect = GetElementRect(Element);
 		let Min = float2( ElementRect.x, ElementRect.y );
 		let Max = float2( Min.x + ElementRect.width, Min.y + ElementRect.height );
 		
@@ -210,7 +283,7 @@ body
 			let NewParent = DroppableShadowElements[0];
 			let DropPos = NewParent.GetDropPos(Element);
 			let DropFunc = NewParent.OnDrop;
-			return { 'snapPos':DropPos, 'callback':DropFunc, 'newParent':NewParent };
+			return { snapPos:DropPos, callback:DropFunc, newParent:NewParent };
 		}
 
 		if ( UndroppableShadowElements.length > 0 )
@@ -296,7 +369,7 @@ body
 			
 			Element.grabClientX = e.clientX;
 			Element.grabClientY = e.clientY;
-			let ClientRect = Element.getBoundingClientRect();
+			let ClientRect = GetElementRect(Element);
 			Element.grabLocalX = Element.grabClientX - ClientRect.x;
 			Element.grabLocalY = Element.grabClientY - ClientRect.y;
 			Element.startDragX = ClientRect.x;
@@ -321,11 +394,9 @@ body
 		var Card = document.createElement('div');
 		Card.className = 'Card';
 		
-		var ImageElement = document.createElement('img');
 		var ImageUrl = 'Card_' + Suit.Name + Number + '.png';
-		ImageElement.src = ImageUrl;
+		Card.style.backgroundImage = 'url("' + ImageUrl + '")';
 		Card.appendChild( document.createTextNode( Number + ' ' + Suit.Name ) );
-		Card.appendChild( ImageElement );
 		
 		MakeElementDraggable( Card );
 		
@@ -338,8 +409,10 @@ body
 		{
 			//	todo: can we accept this card?
 			//	todo: get cascade position of other cards
-			let Offset = float2(10,10);
-			let DeckRect = DeckElement.getBoundingClientRect();
+			//	todo: get an offset from css
+			let Offset = float2(0,0);
+			let DeckRect = GetElementRect(DeckElement);
+			console.log("Deck rect " + DeckRect.y);
 			return float2( DeckRect.x+Offset.x, DeckRect.y+Offset.y );
 		};
 		
@@ -353,7 +426,7 @@ body
 	{
 		let DeckElements = document.getElementsByClassName("Deck");
 		for ( var i=0;i<DeckElements.length;i++ )
-		InitDeck(DeckElements[i]);
+			InitDeck(DeckElements[i]);
 		//[].forEach.call( DeckElements, InitDeck );
 		
 		let Cards = [];
