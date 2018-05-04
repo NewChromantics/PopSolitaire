@@ -3,27 +3,26 @@
 <title>Solitaire</title>
 <style type=text/css>
 
-.Card, .HandName
-{
-	display:	block;
-	margin:		0px;
-	padding:	5px;
-	width:		18vmin;
-	height:		calc( 18vmin * 96 / 71 );
-	border:		solid #000 1px;
-	text-align:	center;
-	overflow:	hidden;
-	background-size:	cover;
-	background-color: #fff;
-}
-
-.HandName
-{
-	border:		none;
+@font-face {
+	font-family: Futura;
+	src: url("http://panopo.ly/FuturaStd-Bold.otf") format("opentype");
 }
 
 .Card
 {
+	display:	block;
+	margin:		0 0 -20vmin 0;
+	padding:	1vmin;
+	width:		22vmin;
+	height:		calc( 22vmin * 96 / 71 );
+	border:		solid #000 1px;
+	text-align:	center;
+	font-size:	4vmin;
+	font-family:	Futura, Arial;
+	white-space: nowrap;
+	overflow:	hidden;
+	background-size:	cover;
+	background-color: #fff;
 	cursor:	hand;
 }
 
@@ -48,10 +47,11 @@ body
 .Deck
 {
 	margin:		1vmin;
+	padding:	0;
 	
 	float:		left;
-	width:		20vmin;
-	height:		calc( 20vmin * 96 / 71 );
+	width:		26vmin;
+	height:		calc( 26vmin * 96 / 71 );
 	background-color: #2C2;
 }
 
@@ -63,6 +63,11 @@ body
 #NewCardDeckHolder
 {
 	float:	left;
+}
+
+#NewCardDeck
+{
+	padding:	2vmin 2vmin 2vmin 10vmin;
 }
 
 </style>
@@ -131,6 +136,7 @@ body
 
 	function GetElementRect(Element)
 	{
+		return Element.getBoundingClientRect();
 		let absolutePosition = GetElementRect;
 		let el = Element;
 		//	need to cope with scroll, not just getBoundingClientRect :/
@@ -206,7 +212,7 @@ body
 		Element.style.top = y + "px";
 	}
 
-	function SetElementParent(Element,Parent)
+	function SetElementParent(Element,Parent,NewPos)
 	{
 		//	make absolute (to detatch from current parent)
 		MakeElementAbsolute(Element);
@@ -218,13 +224,15 @@ body
 		//	make element relative again
 		let ParentRect = GetElementRect(Parent);
 		let ChildRect = GetElementRect(Element);
+		Parent.appendChild(Element);
+		Element.style.position = "inherit";
+		/*
 		ChildRect.x -= ParentRect.x;
 		ChildRect.y -= ParentRect.y;
-		Parent.appendChild(Element);
-		Element.style.position = "relative";
 		Element.style.left = ChildRect.x + "px";
 		Element.style.top = ChildRect.y + "px";
-		
+		 */
+
 		console.log( Element.className + " new parent " + Parent.className );
 	}
 
@@ -400,7 +408,7 @@ body
 		
 		MakeElementDraggable( Card );
 		
-		return { 'Number':Number, 'Suit':Suit, 'Element':Card };
+		return { 'Number':Number, 'Suit':Suit, Element:Card };
 	}
 
 	function InitDeck(DeckElement)
@@ -422,8 +430,104 @@ body
 		};
 	}
 
+
+	var UnusedCardPile = InitCardPile();
+
+	function RandomRange(Min,MaxInclusive)
+	{
+		let Count = MaxInclusive - Min;
+		let Randomf = Math.random();
+		let Randomi = Math.floor( Randomf * Count );
+		let Rand = Min + Randomi;
+		return Rand;
+	}
+
+	function InitCardPile()
+	{
+		let Numbers = [ 2,3,4,5,6,7,8,9,$Jack,$Queen,$King,$Ace ];
+		let Suits = [ $Heart, $Diamond, $Club, $Spade ];
+		let Cards = [];
+		let AllocSuitCards = function(Suit)
+		{
+			let AllocSuitCard = function(Number)
+			{
+				Cards.push( CreateCard(Number,Suit) );
+			};
+			Numbers.forEach( AllocSuitCard );
+		};
+		Suits.forEach( AllocSuitCards );
+		return Cards;
+	}
+
+	function GetRandomUnusedCard()
+	{
+		if ( UnusedCardPile.length == 0 )
+			return null;
+		let Index = RandomRange( 0, UnusedCardPile.length-1 );
+		let RandomCard = UnusedCardPile[Index];
+		UnusedCardPile.splice(Index, 1);
+		return RandomCard;
+	}
+
+	function InitScratchDeck(DeckElement,CardStackCount)
+	{
+		//	put cards on the deck
+		for ( let i=0;	i<CardStackCount;	i++ )
+		{
+			let RandomCard = GetRandomUnusedCard();
+			SetElementParent( RandomCard.Element, DeckElement );
+		}
+		InitDeck( DeckElement );
+	}
+
+	function InitSuitDeck(DeckElement,Suit)
+	{
+		InitDeck( DeckElement );
+	}
+
+	function InitNewCardDeck(DeckElement)
+	{
+		//	click to spawn card
+		let OnNewCardDeckClick = function(e)
+		{
+			e = e || window.event;
+			e.preventDefault();
+			
+			let RandomCard = GetRandomUnusedCard();
+			if ( RandomCard == null )
+			{
+				//	todo: recycle deck
+				console.log("Out of cards!");
+				return;
+			}
+			SetElementParent( RandomCard.Element, DeckElement );
+		};
+		
+		DeckElement.onclick = OnNewCardDeckClick;
+	}
+
 	function Init()
 	{
+		let NewCardDeck = document.getElementById('NewCardDeck');
+		InitNewCardDeck(NewCardDeck);
+
+		let ScratchDeckIds = ['ScratchDeck0','ScratchDeck1','ScratchDeck2','ScratchDeck3','ScratchDeck4','ScratchDeck5','ScratchDeck6'];
+		for ( let i=0;	i<ScratchDeckIds.length;	i++ )
+		{
+			let ScratchCardDeckElement = document.getElementById(ScratchDeckIds[i]);
+			//InitScratchDeck(ScratchCardDeckElement,i+1);
+			InitScratchDeck(ScratchCardDeckElement,1);
+		}
+
+		let SuitDeckIds = ['HeartDeck','DiamondDeck','ClubDeck','SpadeDeck'];
+		let SuitDeckSuits = [$Heart,$Diamond,$Club,$Spade];
+		for ( let i=0;	i<SuitDeckIds.length;	i++ )
+		{
+			let SuitDeckElement = document.getElementById(SuitDeckIds[i]);
+			InitSuitDeck(SuitDeckElement,SuitDeckSuits[i]);
+		}
+
+		/*
 		let DeckElements = document.getElementsByClassName("Deck");
 		for ( var i=0;i<DeckElements.length;i++ )
 			InitDeck(DeckElements[i]);
@@ -446,6 +550,7 @@ body
 			SetElementPosition( Card.Element, x, 20 );
 		};
 		Cards.forEach( PositionCard );
+		 */
 	}
 
 	Init();
