@@ -8,32 +8,78 @@
 	src: url("http://panopo.ly/FuturaStd-Bold.otf") format("opentype");
 }
 
+:root
+{
+	--CardRatio:			calc( 96 / 71 );
+	
+	--CardHeight:			calc( var(--CardWidth) * var(--CardRatio) );
+	--CardWidth:			10vmin;
+	
+	--CardTextLineHeight:	calc( var(--CardHeight) * 0.2 );
+	--CardTextSize:			calc( var(--CardTextLineHeight) * 0.8 );
+}
+
+body
+{
+	
+	background: repeating-linear-gradient(
+	45deg,
+	#88c728,
+	#88c728 5vmin,
+	#8dd028 5vmin,
+	#8dd028 10vmin
+	);
+	background-attachment: fixed;
+}
+
 .Card
 {
 	display:	inline-block;
-	padding:	1vmin;
-	width:		22vmin;
-	height:		calc( 22vmin * 96 / 71 );
-	border:		solid #000 1px;
+	width:		var(--CardWidth);
+	height:		var(--CardHeight);
+	xborder:		solid #000 1px;
 	text-align:	center;
-	font-size:	4vmin;
+	font-size:	var(--CardTextSize);
 	font-family:	Futura, Arial;
 	white-space: nowrap;
 	overflow:	hidden;
 	background-size:	cover;
-	background-color: #fff;
+	xbackground-color: #fff;
 	cursor:	hand;
+	
+	/* can't do this in the span.. */
+	border-radius: calc( var(--CardWidth) * 0.05 );
+
+}
+
+.Diamond, .Heart, .Club, .Spade
+{
+	margin-top:		calc( var(--CardHeight) * -0.465 );
+	margin-left:	calc( var(--CardWidth) * -0.08 );
+	height:		var(--CardHeight);
+	font-size:	calc( var(--CardHeight) * 1.22 );
+	display:	block;
+	
+	height:	auto;
+	color:	#C00;
+	background:	blue;
+	background:white;
+}
+
+.Club, .Spade
+{
+	color:	#000;
 }
 
 /* cascading */
 #ScratchDeckHolder .Deck .Card
 {
-	margin:		0 0 -25vmin 0;
+	margin:		0 0 calc( var(--CardTextLineHeight) - var(--CardHeight) ) 0;
 }
 
 #NewCardDeck .Card
 {
-	margin:		0 -10vmin 0 0;
+	margin:		0 calc(var(--CardWidth) * -0.7) 0 0;
 }
 
 #SuitDeckHolder .Deck .Card
@@ -43,7 +89,7 @@
 
 #SuitDeckHolder .Deck .Card:last-child
 {
-	margin:		0 0 -25vmin 0;
+	margin:		0 0 calc( var(--CardTextLineHeight) - var(--CardHeight) ) 0;
 	display:	inherit;
 }
 
@@ -63,35 +109,38 @@ body
 
 .DeckHolder, #DeckTopRow
 {
-	margin:		1vmin;
+	margin:		calc( var(--CardHeight) * 0.1 );
 	display:	flow-root;
 }
 
 .Deck
 {
+	--margin:	calc( var(--CardWidth) * 0.1 );
 	xxxposition:	relative;	/* make children have an absolute relative to us */
-	margin:		1vmin;
+	margin:		var(--margin);
 	padding:	0;
 	
 	float:		left;
-	width:		26vmin;
-	height:		calc( 26vmin * 96 / 71 );
-	background-color: #2C2;
+	width:		calc( var(--CardWidth) + var(--margin) + var(--margin) );
+	height:		calc( var(--CardHeight) + var(--margin) + var(--margin) );
+	xxxbackground-color: #2C2;
 }
 
 #SuitDeckHolder
 {
-	float:	right;
+	border:		solid #000 1px;
+	float:		left;
 }
 
 #NewCardDeckHolder
 {
-	float:	left;
+	border:		solid #000 1px;
+	float:		left;
 }
 
 #NewCardDeck
 {
-	width:		calc(22vmin * 5);
+	width:		calc( var(--CardWidth) * 5);
 	padding:	2vmin 2vmin 2vmin 10vmin;
 }
 
@@ -446,11 +495,85 @@ body
 	var $Jack = 11;
 	var $Queen = 12;
 	var $King = 13;
-	var $Ace = 14;
+	var $Ace = 1;
 	var $Diamond = CreateSuit('Diamond',$Red);
 	var $Heart = CreateSuit('Heart',$Red);
 	var $Spade = CreateSuit('Spade',$Black);
 	var $Club = CreateSuit('Club',$Black);
+
+	function GetCardEmoji(Suit,Number)
+	{
+		let HtmlPrefix = "&#x";
+		let HtmlSuffix = ";";
+		let CssPrefix = "\01";
+		let CssSuffix = "";
+		let Emojis = [];
+		let Heart = $Heart.Name;
+		let Diamond = $Diamond.Name;
+		let Spade = $Spade.Name;
+		let Club = $Club.Name;
+		
+		Emojis[Heart+$Ace] = "1F0B1";
+		Emojis[Heart+2] = "1F0B2";
+		Emojis[Heart+3] = "1F0B3";
+		Emojis[Heart+4] = "1F0B4";
+		Emojis[Heart+5] = "1F0B5";
+		Emojis[Heart+6] = "1F0B6";
+		Emojis[Heart+7] = "1F0B7";
+		Emojis[Heart+8] = "1F0B8";
+		Emojis[Heart+9] = "1F0B9";
+		Emojis[Heart+10] = "1F0BA";
+		Emojis[Heart+$Jack] = "1F0BB";	//	"knight" is C!
+		Emojis[Heart+$Queen] = "1F0BD";
+		Emojis[Heart+$King] = "1F0BE";
+		
+		Emojis[Diamond+$Ace] = "1F0C1";
+		Emojis[Diamond+2] = "1F0C2";
+		Emojis[Diamond+3] = "1F0C3";
+		Emojis[Diamond+4] = "1F0C4";
+		Emojis[Diamond+5] = "1F0C5";
+		Emojis[Diamond+6] = "1F0C6";
+		Emojis[Diamond+7] = "1F0C7";
+		Emojis[Diamond+8] = "1F0C8";
+		Emojis[Diamond+9] = "1F0C9";
+		Emojis[Diamond+10] = "1F0CA";
+		Emojis[Diamond+$Jack] = "1F0CB";	//	"knight" is C!
+		Emojis[Diamond+$Queen] = "1F0CD";
+		Emojis[Diamond+$King] = "1F0CE";
+		
+		Emojis[Spade+$Ace] = "1F0A1";
+		Emojis[Spade+2] = "1F0A2";
+		Emojis[Spade+3] = "1F0A3";
+		Emojis[Spade+4] = "1F0A4";
+		Emojis[Spade+5] = "1F0A5";
+		Emojis[Spade+6] = "1F0A6";
+		Emojis[Spade+7] = "1F0A7";
+		Emojis[Spade+8] = "1F0A8";
+		Emojis[Spade+9] = "1F0A9";
+		Emojis[Spade+10] = "1F0AA";
+		Emojis[Spade+$Jack] = "1F0AB";	//	"knight" is C!
+		Emojis[Spade+$Queen] = "1F0AD";
+		Emojis[Spade+$King] = "1F0AE";
+		
+		Emojis[Club+$Ace] = "1F0D1";
+		Emojis[Club+2] = "1F0D2";
+		Emojis[Club+3] = "1F0D3";
+		Emojis[Club+4] = "1F0D4";
+		Emojis[Club+5] = "1F0D5";
+		Emojis[Club+6] = "1F0D6";
+		Emojis[Club+7] = "1F0D7";
+		Emojis[Club+8] = "1F0D8";
+		Emojis[Club+9] = "1F0D9";
+		Emojis[Club+10] = "1F0DA";
+		Emojis[Club+$Jack] = "1F0DB";	//	"knight" is C!
+		Emojis[Club+$Queen] = "1F0DD";
+		Emojis[Club+$King] = "1F0DE";
+		
+		let Index = Suit+Number;
+		let Html = HtmlPrefix + Emojis[Index] + HtmlSuffix;
+		return Html;
+	}
+
 
 	function GetLabel(Number)
 	{
@@ -464,12 +587,17 @@ body
 
 	function CreateCard(Number,Suit)
 	{
-		var Card = document.createElement('div');
+		let Card = document.createElement('div');
 		Card.className = 'Card';
 		
-		var ImageUrl = 'Card_' + Suit.Name + GetLabel(Number) + '.png';
-		Card.style.backgroundImage = 'url("' + ImageUrl + '")';
-		Card.appendChild( document.createTextNode( GetLabel(Number) + ' ' + Suit.Name ) );
+		
+		let ImageUrl = 'Card_' + Suit.Name + GetLabel(Number) + '.png';
+		//Card.style.backgroundImage = 'url("' + ImageUrl + '")';
+		let LabelElement = document.createElement('span');
+		LabelElement.innerHTML = GetCardEmoji(Suit.Name,Number);
+		//LabelElement.innerText = GetLabel(Number) + ' ' + Suit.Name;
+		LabelElement.className = Suit.Name;
+		Card.appendChild( LabelElement );
 		Card.Suit = Suit;
 		Card.Number = Number;
 		
