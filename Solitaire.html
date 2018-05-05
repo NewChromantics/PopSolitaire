@@ -10,8 +10,7 @@
 
 .Card
 {
-	display:	block;
-	margin:		0 0 -20vmin 0;
+	display:	inline-block;
 	padding:	1vmin;
 	width:		22vmin;
 	height:		calc( 22vmin * 96 / 71 );
@@ -25,6 +24,19 @@
 	background-color: #fff;
 	cursor:	hand;
 }
+
+/* cascading */
+#ScratchDeckHolder .Deck .Card
+{
+	margin:		0 0 -25vmin 0;
+}
+
+
+#NewCardDeck .Card
+{
+	margin:		0 -10vmin 0 0;
+}
+
 
 .Hand:after
 {
@@ -46,6 +58,7 @@ body
 
 .Deck
 {
+	xxxposition:	relative;	/* make children have an absolute relative to us */
 	margin:		1vmin;
 	padding:	0;
 	
@@ -67,6 +80,7 @@ body
 
 #NewCardDeck
 {
+	width:		calc(22vmin * 5);
 	padding:	2vmin 2vmin 2vmin 10vmin;
 }
 
@@ -98,23 +112,6 @@ body
 </div>
 
 <script>
-
-	function CreateSuit(_Name,_Colour)
-	{
-		return { Name:_Name, Colour:_Colour };
-	}
-
-	var HighestZ = 1;
-	var $Red = 'red';
-	var $Black = 'black';
-	var $Jack = 'Jack';
-	var $Queen = 'Queen';
-	var $King = 'King';
-	var $Ace = 'Ace';
-	var $Diamond = CreateSuit('Diamond',$Red);
-	var $Heart = CreateSuit('Heart',$Red);
-	var $Spade = CreateSuit('Spade',$Black);
-	var $Club = CreateSuit('Club',$Black);
 
 	function float2(_x,_y)
 	{
@@ -307,8 +304,9 @@ body
 		let OnMouseDrag = function(e)
 		{
 			e = e || window.event;
-			e.preventDefault();
 			
+			e.preventDefault();
+
 			let MouseX = e.clientX;
 			let MouseY = e.clientY;
 			
@@ -346,19 +344,15 @@ body
 				//	do drop
 				Droppable.callback(Element);
 			}
-			else if ( Element.grabParent != null )
+			else
 			{
-				console.log(Element.parentNode.className);
-				/*
-				console.log("reverting to parent");
-				//	revert back to previous parent
-				//	Element.grabParent.OnDrop ?
-				//	gr: make a "grab from object revert" func
-				SetElementParent( Element, Element.grabParent );
-				 */
+				//	revert the drag
+				if ( Element.OnGrabRevert != null )
+				{
+					Element.OnGrabRevert();
+				}
 			}
-			
-			Element.grabParent = null;
+			Element.OnGrabRevert = null;
 			
 			Element.onmouseup = null;
 			Element.onmousemove = null;
@@ -369,6 +363,24 @@ body
 		let OnMouseDown = function(e)
 		{
 			e = e || window.event;
+			
+			//	grab from parent. This returns null if it can't be dragged.
+			//	otherwise returns a revert func
+			let Parent = Element.parentNode;
+			if ( Parent.OnDetachElement == null )
+			{
+				console.log(Parent);
+				console.log("#" + Parent.id + "." + Parent.className + " has no OnDetachElement func");
+				return;
+			}
+			
+			Element.OnGrabRevert = Parent.OnDetachElement( Element );
+			if ( Element.OnGrabRevert == null )
+			{
+				console.log("#" + Parent.id + "." + Parent.className + " disallowed detatch");
+				return;
+			}
+			
 			e.preventDefault();
 			
 			//	jump to top
@@ -397,35 +409,107 @@ body
 		Element.onmousedown = OnMouseDown;
 	}
 
+
+
+
+
+
+
+
+
+
+
+	function CreateSuit(_Name,_Colour)
+	{
+		return { Name:_Name, Colour:_Colour };
+	}
+
+	var HighestZ = 1;
+	var $Red = 'red';
+	var $Black = 'black';
+	var $Jack = 11;
+	var $Queen = 12;
+	var $King = 13;
+	var $Ace = 14;
+	var $Diamond = CreateSuit('Diamond',$Red);
+	var $Heart = CreateSuit('Heart',$Red);
+	var $Spade = CreateSuit('Spade',$Black);
+	var $Club = CreateSuit('Club',$Black);
+
+	function GetLabel(Number)
+	{
+		if ( Number == $Jack )	return "Jack";
+		if ( Number == $Queen )	return "Queen";
+		if ( Number == $King )	return "King";
+		if ( Number == $Ace )	return "Ace";
+		return Number;
+	}
+
+
 	function CreateCard(Number,Suit)
 	{
 		var Card = document.createElement('div');
 		Card.className = 'Card';
 		
-		var ImageUrl = 'Card_' + Suit.Name + Number + '.png';
+		var ImageUrl = 'Card_' + Suit.Name + GetLabel(Number) + '.png';
 		Card.style.backgroundImage = 'url("' + ImageUrl + '")';
-		Card.appendChild( document.createTextNode( Number + ' ' + Suit.Name ) );
+		Card.appendChild( document.createTextNode( GetLabel(Number) + ' ' + Suit.Name ) );
+		Card.Suit = Suit;
+		Card.Number = Number;
 		
 		MakeElementDraggable( Card );
 		
-		return { 'Number':Number, 'Suit':Suit, Element:Card };
+		return Card;
+	}
+
+	function VminToPx(Value)
+	{
+		let vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+		let vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+		let vmin = Math.min( vw, vh ) / 100;
+		ValuePx = vmin * Value;
+		return ValuePx;
+	}
+
+	function GetElementStyle(Element)
+	{
+		//	https://stackoverflow.com/a/14275343/355753
+		return Element.currentStyle || window.getComputedStyle(Element);
+	}
+
+	function GetLastChild(Element,Default)
+	{
+		if ( Element.children.length == 0 )
+			return Default;
+		return Element.children[Element.children.length-1];
 	}
 
 	function InitDeck(DeckElement)
 	{
 		DeckElement.GetDropPos = function(Element)
 		{
-			//	todo: can we accept this card?
-			//	todo: get cascade position of other cards
-			//	todo: get an offset from css
-			let Offset = float2(0,0);
-			let DeckRect = GetElementRect(DeckElement);
-			console.log("Deck rect " + DeckRect.y);
+			if ( !DeckElement.CanAcceptCard(Element) )
+				return null;
+			
+			//	get rect of the last element we'll be dropped on
+			//	todo: maybe DOM/js has a specific func for that
+			//	^^ create an element get it's pos and delete it again
+			let LastChild = GetLastChild(DeckElement,DeckElement);
+			
+			let MarginTop = parseFloat(GetElementStyle(LastChild).marginTop);
+			let MarginBottom = parseFloat(GetElementStyle(LastChild).marginBottom);
+			let Offset = float2( 0, MarginBottom );
+
+			let DeckRect = GetElementRect(LastChild);
+			//	new position will be after the last child
+			DeckRect.y += DeckRect.height;
+			
 			return float2( DeckRect.x+Offset.x, DeckRect.y+Offset.y );
 		};
 		
 		DeckElement.OnDrop = function(Element)
 		{
+			console.log("ondrop " + Element);
 			SetElementParent( Element, DeckElement );
 		};
 	}
@@ -475,13 +559,37 @@ body
 		for ( let i=0;	i<CardStackCount;	i++ )
 		{
 			let RandomCard = GetRandomUnusedCard();
-			SetElementParent( RandomCard.Element, DeckElement );
+			SetElementParent( RandomCard, DeckElement );
 		}
+		
+		let CanAcceptCard = function(Element)
+		{
+			let LastChild = GetLastChild( DeckElement, null );
+			let RequiredNumber = (LastChild == null) ? $King : LastChild.Number-1;
+			if ( Element.Number != RequiredNumber )
+			{
+				console.log("Element.Number (" + Element.Number + ") != RequiredNumber(" + RequiredNumber + ")");
+				return false;
+			}
+			return true;
+		};
+		DeckElement.CanAcceptCard = CanAcceptCard;
+		
 		InitDeck( DeckElement );
 	}
 
 	function InitSuitDeck(DeckElement,Suit)
 	{
+		DeckElement.Suit = Suit;
+		
+		let CanAcceptCard = function(Element)
+		{
+			if ( Element.Suit != Suit )
+				return false;
+			return true;
+		};
+		DeckElement.CanAcceptCard = CanAcceptCard;
+		
 		InitDeck( DeckElement );
 	}
 
@@ -500,10 +608,29 @@ body
 				console.log("Out of cards!");
 				return;
 			}
-			SetElementParent( RandomCard.Element, DeckElement );
+			SetElementParent( RandomCard, DeckElement );
+		};
+		
+		let OnDetachElement = function(Element)
+		{
+			//	if this is the last card, let it be detatched
+			let LastChild = GetLastChild(DeckElement,null);
+			if ( LastChild == Element )
+			{
+				let Revert = function()
+				{
+					SetElementParent( Element, DeckElement );
+				};
+				return Revert;
+			}
+			
+			//	cannot detatch this element
+			return null;
 		};
 		
 		DeckElement.onclick = OnNewCardDeckClick;
+		
+		DeckElement.OnDetachElement = OnDetachElement;
 	}
 
 	function Init()
@@ -515,8 +642,7 @@ body
 		for ( let i=0;	i<ScratchDeckIds.length;	i++ )
 		{
 			let ScratchCardDeckElement = document.getElementById(ScratchDeckIds[i]);
-			//InitScratchDeck(ScratchCardDeckElement,i+1);
-			InitScratchDeck(ScratchCardDeckElement,1);
+			InitScratchDeck(ScratchCardDeckElement,i+1);
 		}
 
 		let SuitDeckIds = ['HeartDeck','DiamondDeck','ClubDeck','SpadeDeck'];
