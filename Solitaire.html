@@ -31,11 +31,22 @@
 	margin:		0 0 -25vmin 0;
 }
 
-
 #NewCardDeck .Card
 {
 	margin:		0 -10vmin 0 0;
 }
+
+#SuitDeckHolder .Deck .Card
+{
+	display:	none;
+}
+
+#SuitDeckHolder .Deck .Card:last-child
+{
+	margin:		0 0 -25vmin 0;
+	display:	inherit;
+}
+
 
 
 .Hand:after
@@ -325,6 +336,7 @@ body
 					NewY = Droppable.snapPos.y;
 				}
 			}
+			Element.DropMeta = Droppable;
 			
 			SetElementPosition( Element, NewX, NewY );
 		};
@@ -334,9 +346,12 @@ body
 			OnMouseDrag(e);
 
 			//	drop!
-			let Droppable = GetDropCallback(Element);
+			let Droppable = Element.DropMeta;
+			//let Droppable = GetDropCallback(Element);
+			console.log(Droppable);
 			if ( Droppable != null )
 			{
+				console.log("Has droppable");
 				console.log("on drop " + Droppable.snapPos.x);
 				//	do snap in case we skipped it earlier
 				SetElementPosition( Element, Droppable.snapPos.x, Droppable.snapPos.y );
@@ -346,6 +361,7 @@ body
 			}
 			else
 			{
+				console.log("revert droppable");
 				//	revert the drag
 				if ( Element.OnGrabRevert != null )
 				{
@@ -494,16 +510,26 @@ body
 			//	get rect of the last element we'll be dropped on
 			//	todo: maybe DOM/js has a specific func for that
 			//	^^ create an element get it's pos and delete it again
-			let LastChild = GetLastChild(DeckElement,DeckElement);
+			let LastChild = GetLastChild(DeckElement,null);
 			
-			let MarginTop = parseFloat(GetElementStyle(LastChild).marginTop);
-			let MarginBottom = parseFloat(GetElementStyle(LastChild).marginBottom);
-			let Offset = float2( 0, MarginBottom );
+			let MarginTop = 0;
+			let MarginBottom = 0;
+			let DeckRect = {};
 
-			let DeckRect = GetElementRect(LastChild);
-			//	new position will be after the last child
-			DeckRect.y += DeckRect.height;
+			if ( LastChild != null )
+			{
+				MarginTop = parseFloat(GetElementStyle(LastChild).marginTop);
+				MarginBottom = parseFloat(GetElementStyle(LastChild).marginBottom);
+				DeckRect = GetElementRect(LastChild);
+				//	new position will be after the last child
+				DeckRect.y += DeckRect.height;
+			}
+			else
+			{
+				DeckRect = GetElementRect(DeckElement);
+			}
 			
+			let Offset = float2( 0, MarginBottom );
 			return float2( DeckRect.x+Offset.x, DeckRect.y+Offset.y );
 		};
 		
