@@ -707,6 +707,18 @@ body
 		return RandomCard;
 	}
 
+	function IsDifferentSuitColour(SuitA,SuitB)
+	{
+		//	one is null, one isn't
+		if ( (SuitA == null) != (SuitB==null) )
+			return true;
+		//	both null
+		if ( SuitA == null )
+			return false;
+	
+		return SuitA.Colour != SuitB.Colour;
+	}
+
 	function InitScratchDeck(DeckElement,CardStackCount)
 	{
 		//	put cards on the deck
@@ -720,11 +732,21 @@ body
 		{
 			let LastChild = GetLastChild( DeckElement, null );
 			let RequiredNumber = (LastChild == null) ? $King : LastChild.Number-1;
+			let LastChildSuit = (LastChild==null) ? null : LastChild.Suit;
+			
+			let DifferentSuit = IsDifferentSuitColour( Element.Suit, LastChildSuit );
+			if ( !DifferentSuit )
+			{
+				console.log("Cannot drop " + Element.Suit.Name + " on " + LastChildSuit.Name );
+				return false;
+			}
+			
 			if ( Element.Number != RequiredNumber )
 			{
 				console.log("Element.Number (" + Element.Number + ") != RequiredNumber(" + RequiredNumber + ")");
 				return false;
 			}
+			
 			return true;
 		};
 		DeckElement.CanAcceptCard = CanAcceptCard;
