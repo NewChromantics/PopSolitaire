@@ -13,7 +13,7 @@
 	--CardRatio:			calc( 96 / 71 );
 	
 	--CardHeight:			calc( var(--CardWidth) * var(--CardRatio) );
-	--CardWidth:			10vmin;
+	--CardWidth:			13vmin;
 	
 	--CardTextLineHeight:	calc( var(--CardHeight) * 0.18 );
 	--CardTextSize:			calc( var(--CardTextLineHeight) * 0.8 );
@@ -41,7 +41,7 @@ body
 	background-attachment: fixed;
 }
 
-.Card
+.Card, .CardMystery
 {
 	display:	inline-block;
 	width:		var(--CardWidth);
@@ -58,10 +58,17 @@ body
 	
 	/* can't do this in the span.. */
 	border-radius: calc( var(--CardWidth) * 0.05 );
-
 }
 
-.Diamond, .Heart, .Club, .Spade
+.CardMystery
+{
+	background:	blue;
+}
+
+.Diamond,
+.Heart,
+.Club,
+.Spade
 {
 	margin-top:		var(--CardEmojiMarginTop);
 	margin-left:	var(--CardEmojiMarginLeft);
@@ -73,17 +80,26 @@ body
 	background:	white;
 }
 
+.CardMystery .Diamond,
+.CardMystery .Heart,
+.CardMystery .Club,
+.CardMystery .Spade
+{
+	background:	none;
+}
+
+
 .Club, .Spade
 {
 	color:	#000;
 }
 
 /* cascading */
-#ScratchDeckHolder .Deck .Card
+#ScratchDeckHolder .Deck .Card,
+#ScratchDeckHolder .Deck .CardMystery
 {
 	margin:		0 0 calc( var(--CardTextLineHeight) - var(--CardHeight) ) 0;
 }
-
 #NewCardDeck .Card
 {
 	margin:		0 calc(var(--CardWidth) * -0.7) 0 0;
@@ -146,8 +162,8 @@ body
 
 #NewCardDeck
 {
-	width:		calc( var(--CardWidth) * 5);
-	padding:	2vmin 2vmin 2vmin 10vmin;
+	width:		calc( var(--CardWidth) * 2);
+	padding:	1vmin 1vmin 1vmin var(--CardWidth);
 }
 
 #HeartDeck, #SpadeDeck, #ClubDeck, #DiamondDeck
@@ -347,7 +363,7 @@ background:none;
 		let ParentRect = GetElementRect(Parent);
 		let ChildRect = GetElementRect(Element);
 		Parent.appendChild(Element);
-		Element.style.position = "inherit";
+		Element.style.position = "initial";
 		/*
 		ChildRect.x -= ParentRect.x;
 		ChildRect.y -= ParentRect.y;
@@ -516,6 +532,9 @@ background:none;
 			//	jump to top
 			Element.grabParent = Element.parentNode;
 			SetElementToTop(Element);
+			//	need to make any children go above that though
+			let ElementCardChildren = GetCardChildren(Element);
+			ElementCardChildren.forEach( SetElementToTop );
 			
 			Element.grabClientX = e.clientX;
 			Element.grabClientY = e.clientY;
@@ -554,6 +573,7 @@ background:none;
 		return { Name:_Name, Colour:_Colour };
 	}
 
+	var $CardMysteryClassName = 'CardMystery';
 	var $CardClassName = 'Card';
 	var $HighestZ = 100;
 	var $Red = 'red';
@@ -566,6 +586,20 @@ background:none;
 	var $Heart = CreateSuit('Heart',$Red);
 	var $Spade = CreateSuit('Spade',$Black);
 	var $Club = CreateSuit('Club',$Black);
+
+	function IsCard(Element)
+	{
+		if ( Element.className == $CardClassName )
+			return true;
+		return IsCardMystery(Element);
+	}
+
+	function IsCardMystery(Element)
+	{
+		if ( Element.className == $CardMysteryClassName )
+			return true;
+		return false;
+	}
 
 	function GetCardEmoji(Suit,Number)
 	{
@@ -650,12 +684,18 @@ background:none;
 		return Number;
 	}
 
+	function SetCardMystery(Element,Mystery)
+	{
+		if ( Mystery )
+			Element.className = $CardMysteryClassName;
+		else
+			Element.className = $CardClassName;
+	}
 
 	function CreateCard(Number,Suit)
 	{
 		let Card = document.createElement('div');
-		Card.className = 'Card';
-		
+		SetCardMystery(Card,false);
 		
 		let ImageUrl = 'Card_' + Suit.Name + GetLabel(Number) + '.png';
 		//Card.style.backgroundImage = 'url("' + ImageUrl + '")';
@@ -687,17 +727,32 @@ background:none;
 		return Element.currentStyle || window.getComputedStyle(Element);
 	}
 
-	function GetLastCard(Element,Default)
+	function GetCardChildren(Element,AfterFirstElement)
 	{
+		AfterFirstElement = AfterFirstElement || null;
+		
 		let CardChildren = [];
 		for ( let i=0;	i<Element.children.length;	i++ )
 		{
 			let Child = Element.children[i];
-			if ( Child.className != $CardClassName )
+			if ( AfterFirstElement != null )
+			{
+				if ( AfterFirstElement == Child )
+					AfterFirstElement = null;
+				continue;
+			}
+			if ( !IsCard(Child) )
 				continue;
 			CardChildren.push( Child );
 		}
-		return CardChildren.pop() || null;
+		return CardChildren;
+	}
+
+	function GetLastCard(Element,Default)
+	{
+		Default = Default || null;
+		let CardChildren = GetCardChildren(Element);
+		return CardChildren.pop() || Default;
 	}
 
 	function InitDeck(DeckElement)
@@ -798,7 +853,25 @@ background:none;
 		{
 			let RandomCard = GetRandomUnusedCard();
 			SetElementParent( RandomCard, DeckElement );
+			let IsLast = (i == CardStackCount-1);
+			let Mystery = !IsLast;
+			SetCardMystery(RandomCard, Mystery);
 		}
+		
+		//	click to spawn card
+		let OnScratchDeckClick = function(e)
+		{
+			e = e || window.event;
+			e.preventDefault();
+			
+			//	if last card is a mystery, flip it!
+			let LastCard = GetLastCard(DeckElement);
+			if ( IsCardMystery(LastCard) )
+			{
+				SetCardMystery( LastCard, false );
+			}
+		};
+		
 		
 		let CanAcceptCard = function(Element)
 		{
@@ -824,22 +897,36 @@ background:none;
 		
 		let OnDetachElement = function(Element)
 		{
-			//	gr: todo: allow detatch of any face-up card and take all those below it
-			//	if this is the last card, let it be detatched
-			let LastChild = GetLastCard(DeckElement,null);
-			if ( LastChild == Element )
+			//	can't pickup a mystery card
+			if ( IsCardMystery(Element) )
+				return null;
+			if ( !IsCard(Element) )
+				return null;
+	
+			//	take any non mystery card, but take all those below it too
+			//	gr: maybe the actual detatching needs to be here...
+			let ElementLatterCards = GetCardChildren(DeckElement,Element);
+			let ParentToElement = function(ChildElement)
 			{
-				let Revert = function()
-				{
-					SetElementParent( Element, DeckElement );
-				};
-				return Revert;
-			}
+				SetElementParent( ChildElement, Element );
+			};
+			ElementLatterCards.forEach( ParentToElement );
 			
-			//	cannot detatch this element
-			return null;
+			//	rememeber to put the cards back in order!
+			let Revert = function()
+			{
+				SetElementParent( Element, DeckElement );
+				let ElementChildren = GetCardChildren(Element);
+				let ReplaceToDeck = function(ec)
+				{
+					SetElementParent( ec, DeckElement );
+				};
+				ElementChildren.forEach(ReplaceToDeck);
+			};
+			return Revert;
 		};
 		
+		DeckElement.onclick = OnScratchDeckClick;
 		DeckElement.OnDetachElement = OnDetachElement;
 		DeckElement.CanAcceptCard = CanAcceptCard;
 		InitDeck( DeckElement );
@@ -848,6 +935,7 @@ background:none;
 	function InitSuitDeck(DeckElement,Suit)
 	{
 		DeckElement.Suit = Suit;
+		
 		
 		let CanAcceptCard = function(Element)
 		{
