@@ -17,6 +17,15 @@
 	
 	--CardTextLineHeight:	calc( var(--CardHeight) * 0.18 );
 	--CardTextSize:			calc( var(--CardTextLineHeight) * 0.8 );
+	
+	--CardEmojiSize:		calc( var(--CardHeight) * 1.22 );
+	--CardEmojiMarginTop:	calc( var(--CardHeight) * -0.465 );
+	--CardEmojiMarginLeft:	calc( var(--CardWidth) * -0.08 );
+	/* not sure why margin needs half for the sub case */
+	--CardEmojiMarginTopHalf:	calc( var(--CardHeight) * (-0.465*0.5) );
+	--CardEmojiMarginLeftHalf:	calc( var(--CardWidth) * (-0.08*0.5) );
+
+	--UxColour:				#fff;
 }
 
 body
@@ -54,16 +63,14 @@ body
 
 .Diamond, .Heart, .Club, .Spade
 {
-	margin-top:		calc( var(--CardHeight) * -0.465 );
-	margin-left:	calc( var(--CardWidth) * -0.08 );
-	height:		var(--CardHeight);
-	font-size:	calc( var(--CardHeight) * 1.22 );
+	margin-top:		var(--CardEmojiMarginTop);
+	margin-left:	var(--CardEmojiMarginLeft);
+	font-size:	var(--CardEmojiSize);
 	display:	block;
 	
-	height:	auto;
-	color:	#C00;
-	background:	blue;
-	background:white;
+	height:		auto;
+	color:		#C00;
+	background:	white;
 }
 
 .Club, .Spade
@@ -82,17 +89,16 @@ body
 	margin:		0 calc(var(--CardWidth) * -0.7) 0 0;
 }
 
+/* hide all but the last card on a suit deck! sneaky! */
 #SuitDeckHolder .Deck .Card
 {
 	display:	none;
 }
-
 #SuitDeckHolder .Deck .Card:last-child
 {
 	margin:		0 0 calc( var(--CardTextLineHeight) - var(--CardHeight) ) 0;
 	display:	inherit;
 }
-
 
 
 .Hand:after
@@ -128,13 +134,13 @@ body
 
 #SuitDeckHolder
 {
-	border:		solid #fff 3px;
+	border:		solid var(--UxColour) 3px;
 	float:		left;
 }
 
 #NewCardDeckHolder
 {
-	border:		solid #fff 3px;
+	border:		solid var(--UxColour) 3px;
 	float:		left;
 }
 
@@ -143,6 +149,64 @@ body
 	width:		calc( var(--CardWidth) * 5);
 	padding:	2vmin 2vmin 2vmin 10vmin;
 }
+
+#HeartDeck, #SpadeDeck, #ClubDeck, #DiamondDeck
+{
+	/* border INSIDE so it doesn't get bigger, and cards overlap the border
+	 https://stackoverflow.com/a/9601431/355753
+	 */
+	/*
+	box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+	
+	border:		solid var(--UxColour) 3px;
+	color:		var(--UxColour);
+	*/
+}
+
+.BackgroundIcon
+{
+	position: relative;
+}
+
+.BackgroundIcon div
+{
+
+background:none;
+	display:inherit;
+	position: absolute;
+	top: 0;
+	left: 0;
+	margin-top:		var(--CardEmojiMarginTopHalf);
+	margin-left:	var(--CardEmojiMarginLeftHalf);
+
+
+	z-index: -1;
+	xoverflow: hidden;
+	color:	var(--UxColour);
+}
+
+.BackgroundIcon .Heart:after
+{
+	content:'\01F0B1';
+}
+
+.BackgroundIcon .Spade:after
+{
+	content:'\01F0A1';
+}
+
+.BackgroundIcon .Club:after
+{
+	content:'\01F0D1';
+}
+
+.BackgroundIcon .Diamond:after
+{
+	content:'\01F0C1';
+}
+
 
 </style>
 </head>
@@ -154,12 +218,13 @@ body
 	</div>
 
 	<div id=SuitDeckHolder class=DeckHolder>
-		<div class=Deck id=HeartDeck></div>
-		<div class=Deck id=SpadeDeck></div>
-		<div class=Deck id=DiamondDeck></div>
-		<div class=Deck id=ClubDeck></div>
+		<div class=Deck id=HeartDeck><div class=BackgroundIcon><div class=Heart></div></div></div>
+		<div class=Deck id=SpadeDeck><div class=BackgroundIcon><div class=Spade></div></div></div>
+		<div class=Deck id=DiamondDeck><div class=BackgroundIcon><div class=Diamond></div></div></div>
+		<div class=Deck id=ClubDeck><div class=BackgroundIcon><div class=Club></div></div></div>
 	</div>
 </div>
+
 
 <div id=ScratchDeckHolder class=DeckHolder>
 	<div class=Deck id=ScratchDeck0></div>
@@ -187,8 +252,8 @@ body
 
 	function SetElementToTop(Element)
 	{
-		HighestZ++;
-		Element.style.zIndex = HighestZ;
+		$HighestZ++;
+		Element.style.zIndex = $HighestZ;
 	}
 
 	function GetElementRect(Element)
@@ -489,7 +554,8 @@ body
 		return { Name:_Name, Colour:_Colour };
 	}
 
-	var HighestZ = 1;
+	var $CardClassName = 'Card';
+	var $HighestZ = 100;
 	var $Red = 'red';
 	var $Black = 'black';
 	var $Jack = 11;
@@ -621,11 +687,17 @@ body
 		return Element.currentStyle || window.getComputedStyle(Element);
 	}
 
-	function GetLastChild(Element,Default)
+	function GetLastCard(Element,Default)
 	{
-		if ( Element.children.length == 0 )
-			return Default;
-		return Element.children[Element.children.length-1];
+		let CardChildren = [];
+		for ( let i=0;	i<Element.children.length;	i++ )
+		{
+			let Child = Element.children[i];
+			if ( Child.className != $CardClassName )
+				continue;
+			CardChildren.push( Child );
+		}
+		return CardChildren.pop() || null;
 	}
 
 	function InitDeck(DeckElement)
@@ -638,7 +710,7 @@ body
 			//	get rect of the last element we'll be dropped on
 			//	todo: maybe DOM/js has a specific func for that
 			//	^^ create an element get it's pos and delete it again
-			let LastChild = GetLastChild(DeckElement,null);
+			let LastChild = GetLastCard(DeckElement,null);
 			
 			let MarginTop = 0;
 			let MarginBottom = 0;
@@ -730,7 +802,7 @@ body
 		
 		let CanAcceptCard = function(Element)
 		{
-			let LastChild = GetLastChild( DeckElement, null );
+			let LastChild = GetLastCard( DeckElement, null );
 			let RequiredNumber = (LastChild == null) ? $King : LastChild.Number-1;
 			let LastChildSuit = (LastChild==null) ? null : LastChild.Suit;
 			
@@ -754,7 +826,7 @@ body
 		{
 			//	gr: todo: allow detatch of any face-up card and take all those below it
 			//	if this is the last card, let it be detatched
-			let LastChild = GetLastChild(DeckElement,null);
+			let LastChild = GetLastCard(DeckElement,null);
 			if ( LastChild == Element )
 			{
 				let Revert = function()
@@ -779,10 +851,19 @@ body
 		
 		let CanAcceptCard = function(Element)
 		{
-			//	todo: let any suit fall anywhere?
 			if ( Element.Suit != Suit )
 				return false;
-				
+			
+			//	check number is next
+			let LastCard = GetLastCard(DeckElement);
+			console.log(LastCard);
+			let RequiredNumber = (LastCard==null) ? $Ace : LastCard.Number+1;
+			if ( Element.Number != RequiredNumber )
+			{
+				console.log("Element.Number (" + Element.Number + ") != RequiredNumber(" + RequiredNumber + ")");
+				return false;
+			}
+			
 			return true;
 		};
 		DeckElement.CanAcceptCard = CanAcceptCard;
@@ -811,7 +892,7 @@ body
 		let OnDetachElement = function(Element)
 		{
 			//	if this is the last card, let it be detatched
-			let LastChild = GetLastChild(DeckElement,null);
+			let LastChild = GetLastCard(DeckElement,null);
 			if ( LastChild == Element )
 			{
 				let Revert = function()
