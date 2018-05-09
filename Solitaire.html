@@ -749,8 +749,27 @@ body
 			
 			return true;
 		};
-		DeckElement.CanAcceptCard = CanAcceptCard;
 		
+		let OnDetachElement = function(Element)
+		{
+			//	gr: todo: allow detatch of any face-up card and take all those below it
+			//	if this is the last card, let it be detatched
+			let LastChild = GetLastChild(DeckElement,null);
+			if ( LastChild == Element )
+			{
+				let Revert = function()
+				{
+					SetElementParent( Element, DeckElement );
+				};
+				return Revert;
+			}
+			
+			//	cannot detatch this element
+			return null;
+		};
+		
+		DeckElement.OnDetachElement = OnDetachElement;
+		DeckElement.CanAcceptCard = CanAcceptCard;
 		InitDeck( DeckElement );
 	}
 
@@ -760,8 +779,10 @@ body
 		
 		let CanAcceptCard = function(Element)
 		{
+			//	todo: let any suit fall anywhere?
 			if ( Element.Suit != Suit )
 				return false;
+				
 			return true;
 		};
 		DeckElement.CanAcceptCard = CanAcceptCard;
@@ -805,7 +826,6 @@ body
 		};
 		
 		DeckElement.onclick = OnNewCardDeckClick;
-		
 		DeckElement.OnDetachElement = OnDetachElement;
 	}
 
